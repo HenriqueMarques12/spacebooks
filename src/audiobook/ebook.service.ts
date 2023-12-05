@@ -23,7 +23,7 @@ export class EbookService {
       LEFT JOIN RfdNV3uAM_posts AS P2 ON P2.post_parent = P.ID
       INNER JOIN RfdNV3uAM_term_relationships AS R ON P.id = R.object_id
       INNER JOIN RfdNV3uAM_terms AS C ON R.term_taxonomy_id = C.term_id
-      WHERE C.name = 'E-BOOKS' AND P2.post_mime_type LIKE 'image/%' 
+      WHERE C.name = 'AUDIOLIVROS' AND P2.post_mime_type LIKE 'image/%' 
       GROUP BY P.ID
       HAVING postmeta_count > 0
       ORDER BY P.ID DESC
@@ -71,7 +71,6 @@ export class EbookService {
     return categoriasProdArray;
   }
 }
-
 
 
 

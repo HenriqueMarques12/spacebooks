@@ -16,4 +16,4 @@ import { CacheModule } from '@nestjs/cache-manager';
   providers: [EbookService],
   controllers: [EbookController],
 })
-export class EbookModule {}
+export class AudiobookModule {}

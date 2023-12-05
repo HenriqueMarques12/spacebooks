@@ -26,6 +26,7 @@
     "@nestjs/jwt": "^10.2.0",
     "@nestjs/passport": "^10.0.2",
     "@nestjs/platform-express": "^10.0.0",
+    "@nestjs/swagger": "^7.1.16",
     "@nestjs/typeorm": "^10.0.1",
     "cache-manager": "^5.3.1",
     "cache-manager-ioredis": "^2.1.0",
@@ -36,8 +37,10 @@
     "passport": "^0.6.0",
     "passport-jwt": "^4.0.1",
     "passport-local": "^1.0.0",
+    "php-serialize": "^4.1.1",
     "reflect-metadata": "^0.1.13",
     "rxjs": "^7.8.1",
+    "swagger-ui-express": "^5.0.0",
     "typeorm": "^0.3.17"
   },
   "devDependencies": {

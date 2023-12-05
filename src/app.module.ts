@@ -1,18 +1,15 @@
 import { Module } from '@nestjs/common';
-import { CacheModule } from '@nestjs/cache-manager';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { TypeormModule } from './typeorm/typeorm.module';
 import { EbookModule } from './ebook/ebook.module';
+import { AudiobookModule } from './audiobook/ebook.module';
 
 @Module({
   imports: [
     TypeormModule,
     EbookModule,
-    CacheModule.register({
-      ttl: 5000,
-      max: 500,
-    }),
+    AudiobookModule
   ],
   controllers: [AppController],
   providers: [AppService],
