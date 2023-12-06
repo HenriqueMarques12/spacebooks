@@ -1,4 +1,3 @@
-// user-auth.repository.ts
 import { EntityRepository, Repository } from 'typeorm';
 import { UserAuth } from './user-auth.entity';
 

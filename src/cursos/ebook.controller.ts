@@ -1,4 +1,3 @@
-// ebook.controller.ts
 import { Controller, Get, Query, UseInterceptors } from '@nestjs/common';
 import { EbookService } from './ebook.service';
 import { ListarEbooksDto } from './ebook.dto';
