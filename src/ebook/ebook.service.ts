@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Ebook } from './ebook.entity';
@@ -6,6 +6,7 @@ import * as phpSerialize from 'php-serialize';
 
 @Injectable()
 export class EbookService {
+  [x: string]: any;
   constructor(
     @InjectRepository(Ebook)
     private readonly ebookRepository: Repository<Ebook>,
