@@ -1,41 +1,48 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
-import { UserAuthRepository } from './user-auth.repository';
+// auth.service.ts
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { UserAuth } from './user-auth.entity';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class AuthService {
   constructor(
-    private jwtService: JwtService,
-    private userAuthRepository: UserAuthRepository,
+    @InjectRepository(UserAuth)
+    private readonly userRepository: Repository<UserAuth>,
   ) {}
 
-  async validateUser(username: string, password: string): Promise<any> {
-    const user = await this.userAuthRepository.findOne({ where: { username } });
-
-    if (user && user.password === password) {
+  async validateUser(username: string, password: string): Promise<UserAuth | null> {
+    const user = await this.userRepository.findOne({ where: { username } });
+    if (user && (await bcrypt.compare(password, user.password))) {
       return user;
     }
-
     return null;
   }
 
-  async validateUserById(userId: number): Promise<any> {
-    try {
-      const user = await this.userAuthRepository.findOne({ where: { id: userId } });
-
-      if (!user) {
-        throw new UnauthorizedException();
-      }
-
-      return user;
-    } catch (error) {
-      throw new UnauthorizedException();
-    }
+  async createUser(username: string, password: string, role: string, uid: string): Promise<UserAuth> {
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const newUser = this.userRepository.create({ username, password: hashedPassword, role, uid });
+    return await this.userRepository.save(newUser);
   }
 
-  async generateToken(user: any): Promise<string> {
-    const payload = { sub: user.id, username: user.username };
-    return this.jwtService.sign(payload);
+  async getUserById(id: number): Promise<UserAuth | null> {
+    return this.userRepository.findOne({ where: { id } });
+  }
+
+  async updateUser(id: number, username: string, password: string, role: string, uid: string): Promise<UserAuth | null> {
+    const user = await this.userRepository.findOne({ where: { id } });
+    if (user) {
+      user.username = username;
+      user.password = await bcrypt.hash(password, 10);
+      user.role = role;
+      user.uid = uid;
+      return this.userRepository.save(user);
+    }
+    return null;
+  }
+
+  async deleteUser(id: number): Promise<void> {
+    await this.userRepository.delete(id);
   }
 }
-

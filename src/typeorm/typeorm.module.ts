@@ -1,5 +1,3 @@
-// typeorm.module.ts
-
 import { Module, OnModuleInit } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Connection } from 'typeorm';

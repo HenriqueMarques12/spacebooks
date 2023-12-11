@@ -1,6 +1,6 @@
-import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
+import { Entity, Column, PrimaryGeneratedColumn } from 'typeorm';
 
-@Entity('usersAuth')
+@Entity()
 export class UserAuth {
   @PrimaryGeneratedColumn()
   id: number;
@@ -12,5 +12,8 @@ export class UserAuth {
   password: string;
 
   @Column()
-  rule: string;
+  role: string;
+
+  @Column()
+  uid: string;
 }
