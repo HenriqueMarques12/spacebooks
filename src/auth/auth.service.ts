@@ -1,4 +1,3 @@
-// auth.service.ts
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -20,9 +19,27 @@ export class AuthService {
     return null;
   }
 
-  async createUser(username: string, password: string, role: string, uid: string): Promise<UserAuth> {
+  async createUser(data: {
+    username: string;
+    password: string;
+    role: string;
+    uid: string;
+    nome?: string;
+    cpf?: string;
+    dataNascimento?: string;
+    email?: string;
+    telefone?: string;
+    estado?: string;
+    regra?: string;
+    plano?: string;
+    planoStart?: Date;
+    planoFinish?: Date;
+    pdv?: string;
+    parceiro?: string;
+  }): Promise<UserAuth> {
+    const { username, password, role, uid, ...rest } = data;
     const hashedPassword = await bcrypt.hash(password, 10);
-    const newUser = this.userRepository.create({ username, password: hashedPassword, role, uid });
+    const newUser = this.userRepository.create({ username, password: hashedPassword, role, uid, ...rest });
     return await this.userRepository.save(newUser);
   }
 
@@ -30,13 +47,31 @@ export class AuthService {
     return this.userRepository.findOne({ where: { id } });
   }
 
-  async updateUser(id: number, username: string, password: string, role: string, uid: string): Promise<UserAuth | null> {
+  async updateUser(id: number, data: {
+    username?: string;
+    password?: string;
+    role?: string;
+    uid?: string;
+    nome?: string;
+    cpf?: string;
+    dataNascimento?: string;
+    email?: string;
+    telefone?: string;
+    estado?: string;
+    regra?: string;
+    plano?: string;
+    planoStart?: Date;
+    planoFinish?: Date;
+    pdv?: string;
+    parceiro?: string;
+  }): Promise<UserAuth | null> {
     const user = await this.userRepository.findOne({ where: { id } });
     if (user) {
-      user.username = username;
-      user.password = await bcrypt.hash(password, 10);
-      user.role = role;
-      user.uid = uid;
+      const { password, ...rest } = data;
+      if (password) {
+        user.password = await bcrypt.hash(password, 10);
+      }
+      Object.assign(user, rest);
       return this.userRepository.save(user);
     }
     return null;
@@ -46,3 +81,4 @@ export class AuthService {
     await this.userRepository.delete(id);
   }
 }
+
