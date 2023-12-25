@@ -23,7 +23,6 @@ export class AuthService {
     username: string;
     password: string;
     role: string;
-    uid: string;
     nome?: string;
     cpf?: string;
     dataNascimento?: string;
@@ -37,9 +36,9 @@ export class AuthService {
     pdv?: string;
     parceiro?: string;
   }): Promise<UserAuth> {
-    const { username, password, role, uid, ...rest } = data;
+    const { username, password, role, ...rest } = data;
     const hashedPassword = await bcrypt.hash(password, 10);
-    const newUser = this.userRepository.create({ username, password: hashedPassword, role, uid, ...rest });
+    const newUser = this.userRepository.create({ username, password: hashedPassword, role, ...rest });
     return await this.userRepository.save(newUser);
   }
 
@@ -51,7 +50,6 @@ export class AuthService {
     username?: string;
     password?: string;
     role?: string;
-    uid?: string;
     nome?: string;
     cpf?: string;
     dataNascimento?: string;

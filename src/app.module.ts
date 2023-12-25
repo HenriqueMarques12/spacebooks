@@ -7,6 +7,7 @@ import { AudiobookModule } from './audiobook/ebook.module';
 import { ResenhaModule } from './resenhas/ebook.module';
 import { CursoModule } from './cursos/ebook.module';
 import { AuthModule } from './auth/auth.module';
+import { PdvModule } from './pdv/pdv.module';
 
 @Module({
   imports: [
@@ -15,7 +16,8 @@ import { AuthModule } from './auth/auth.module';
     AudiobookModule,
     ResenhaModule,
     CursoModule,
-    AuthModule
+    AuthModule,
+    PdvModule
   ],
   controllers: [AppController],
   providers: [AppService],

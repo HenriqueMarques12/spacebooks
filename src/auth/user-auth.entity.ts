@@ -1,12 +1,10 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, ManyToMany, JoinTable, OneToMany } from 'typeorm';
+import { Pdv } from '../pdv/pdv.entity';
 
 @Entity()
 export class UserAuth {
   @PrimaryGeneratedColumn()
   id: number;
-
-  @Column()
-  uid: string;
 
   @Column({ unique: true })
   username: string;
@@ -47,8 +45,9 @@ export class UserAuth {
   @Column({ nullable: true })
   planoFinish: Date;
 
-  @Column({ nullable: true })
-  pdv: string;
+  @OneToMany(() => Pdv, pdv => pdv.userAuth)
+  pdvs: Pdv[];
+  
 
   @Column({ nullable: true })
   parceiro: string;
