@@ -8,6 +8,8 @@ import { ResenhaModule } from './resenhas/ebook.module';
 import { CursoModule } from './cursos/ebook.module';
 import { AuthModule } from './auth/auth.module';
 import { PdvModule } from './pdv/pdv.module';
+import { ProductModule } from './produtos/product.module';
+import { VendaModule } from './vendas/venda.module';
 
 @Module({
   imports: [
@@ -17,7 +19,9 @@ import { PdvModule } from './pdv/pdv.module';
     ResenhaModule,
     CursoModule,
     AuthModule,
-    PdvModule
+    PdvModule,
+    ProductModule,
+    VendaModule
   ],
   controllers: [AppController],
   providers: [AppService],

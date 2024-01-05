@@ -3,6 +3,7 @@ import { Pdv } from '../pdv/pdv.entity';
 
 @Entity()
 export class UserAuth {
+  [x: string]: any;
   @PrimaryGeneratedColumn()
   id: number;
 
