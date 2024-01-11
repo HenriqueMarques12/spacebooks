@@ -1,6 +1,7 @@
 import { Controller, Post, Request, UseGuards, Get, Param, Put, Delete, HttpStatus, HttpException } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LocalAuthGuard } from './local-auth.guard';
+import { UserAuth } from './user-auth.entity';
 
 @Controller('auth')
 export class AuthController {
@@ -14,7 +15,7 @@ export class AuthController {
 
   @Post('register')
   async register(@Request() req) {
-    const { username, password, role, uid, nome, cpf, dataNascimento, email, telefone, estado, regra, plano, planoStart, planoFinish, pdv, parceiro } = req.body;
+    const { username, password, role, nome, cpf, dataNascimento, email, telefone, estado, regra, plano, planoStart, planoFinish, pdv, parceiro } = req.body;
     return this.authService.createUser({
       username,
       password,
@@ -46,10 +47,15 @@ export class AuthController {
     return user;
   }
 
+  @Get('users/role/:role')
+  getUsersByRole(@Param('role') role: string): Promise<UserAuth[]> {
+    return this.authService.getUsersByRole(role);
+  }
+
   @Put(':id')
   async updateUser(@Param('id') id: string, @Request() req) {
     const userId = parseInt(id, 10);
-    const { username, password, role, uid, nome, cpf, dataNascimento, email, telefone, estado, regra, plano, planoStart, planoFinish, pdv, parceiro } = req.body;
+    const { username, password, role, nome, cpf, dataNascimento, email, telefone, estado, regra, plano, planoStart, planoFinish, pdv, parceiro } = req.body;
 
     const updatedUser = await this.authService.updateUser(userId, {
       username,

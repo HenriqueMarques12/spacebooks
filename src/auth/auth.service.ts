@@ -46,6 +46,10 @@ export class AuthService {
     return this.userRepository.findOne({ where: { id } });
   }
 
+  async getUsersByRole(role: string): Promise<UserAuth[]> {
+    return this.userRepository.find({ where: { role } });
+  }
+
   async updateUser(id: number, data: {
     username?: string;
     password?: string;
