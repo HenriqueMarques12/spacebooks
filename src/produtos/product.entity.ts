@@ -4,8 +4,10 @@ import { Pdv } from '../pdv/pdv.entity';
 @Entity()
 export class Product {
   [x: string]: any;
-  @PrimaryGeneratedColumn('uuid')
-  id: number; 
+  @PrimaryGeneratedColumn()
+  id: number;
+
+  @Column()
   nome_produto: string;
 
   @Column()
