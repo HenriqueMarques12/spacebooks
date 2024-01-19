@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
 import { Repository } from 'typeorm'
 import { UserAuth } from './user-auth.entity'
-import * as bcrypt from 'bcrypt'
 
 @Injectable()
 export class AuthService {
@@ -11,15 +10,12 @@ export class AuthService {
     private readonly userRepository: Repository<UserAuth>,
   ) {}
 
-  async validateUser (
-    username: string,
-    password: string,
-  ): Promise<UserAuth | null> {
-    const user = await this.userRepository.findOne({ where: { username } })
+  async validateUser(email: string, password: string): Promise<UserAuth | null> {
+    const user = await this.userRepository.findOne({ where: { email } });
     if (user && user.password === password) {
-      return user
+      return user;
     }
-    return null
+    return null;
   }
 
   async createUser (data: {
@@ -75,9 +71,6 @@ export class AuthService {
     const user = await this.userRepository.findOne({ where: { id } })
     if (user) {
       const { password, ...rest } = data
-      if (password) {
-        user.password = await bcrypt.hash(password, 10)
-      }
       Object.assign(user, rest)
       return this.userRepository.save(user)
     }
