@@ -19,7 +19,7 @@ export class VendaService {
     return await this.vendaRepository.find();
   }
 
-  async findOne(id: string): Promise<Venda> {
+  async findOne(id: number): Promise<Venda> {
     const venda = await this.vendaRepository.findOne({ where: { id } });
     if (!venda) {
       throw new NotFoundException(`Venda com ID ${id} não encontrada.`);
@@ -27,13 +27,13 @@ export class VendaService {
     return venda;
   }
 
-  async update(id: string, updateData: Partial<Venda>): Promise<Venda> {
+  async update(id: number, updateData: Partial<Venda>): Promise<Venda> {
     const venda = await this.findOne(id);
     const updated = Object.assign(venda, updateData);
     return await this.vendaRepository.save(updated);
   }
 
-  async remove(id: string): Promise<void> {
+  async remove(id: number): Promise<void> {
     const venda = await this.findOne(id);
     await this.vendaRepository.remove(venda);
   }
