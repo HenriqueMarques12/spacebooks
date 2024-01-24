@@ -17,17 +17,17 @@ export class VendaController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string): Promise<Venda> {
+  findOne(@Param('id') id: number): Promise<Venda> {
     return this.vendaService.findOne(id);
   }
 
   @Put(':id')
-  update(@Param('id') id: string, @Body() updateData: Partial<Venda>): Promise<Venda> {
+  update(@Param('id') id: number, @Body() updateData: Partial<Venda>): Promise<Venda> {
     return this.vendaService.update(id, updateData);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string): Promise<void> {
+  remove(@Param('id') id: number): Promise<void> {
     return this.vendaService.remove(id);
   }
 }
