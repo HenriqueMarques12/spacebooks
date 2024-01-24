@@ -5,8 +5,8 @@ import { Product } from '../produtos/product.entity';
 
 @Entity()
 export class Venda {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
+  @PrimaryGeneratedColumn()
+  id: number;
 
   @ManyToOne(() => UserAuth, userAuth => userAuth.vendas)
   @JoinColumn({ name: 'userAuthId' })
