@@ -10,7 +10,20 @@ export class AuthController {
   @UseGuards(LocalAuthGuard)
   @Post('login')
   async login(@Request() req) {
-    return req.user;
+    try {
+      const { email, password } = req.user;
+
+      const user = await this.authService.validateUser(email, password);
+
+      if (user) {
+        return { message: 'Login bem-sucedido', user };
+      } else {
+        return { message: 'Credenciais inválidas' };
+      }
+    } catch (error) {
+      console.error('Erro durante o login:', error);
+      return { message: 'Erro durante o login' };
+    }
   }
 
   @Post('register')

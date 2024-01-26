@@ -11,13 +11,24 @@ export class AuthService {
   ) {}
 
   async validateUser(email: string, password: string): Promise<UserAuth | null> {
-    const user = await this.userRepository.findOne({ where: { email } });
-    if (user && user.password === password) {
-      return user;
+    try {
+      if (!email || !password) {
+       console.log("Invalid email or password")
+        return null;
+      }
+      const user = await this.userRepository.findOne({ where: { email } });
+  
+      if (user && user.password === password) {
+        return user;
+      }
+  
+      return null;
+    } catch (error) {
+      console.error('Erro ao validar usuário:', error);
+      return null;
     }
-    return null;
   }
-
+  
   async createUser (data: {
     username: string
     password: string
