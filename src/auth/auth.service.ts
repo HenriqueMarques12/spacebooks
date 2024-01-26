@@ -10,25 +10,28 @@ export class AuthService {
     private readonly userRepository: Repository<UserAuth>,
   ) {}
 
-  async validateUser(email: string, password: string): Promise<UserAuth | null> {
+  async validateUser (
+    email: string,
+    password: string,
+  ): Promise<UserAuth | null> {
     try {
       if (!email || !password) {
-       console.log("Invalid email or password")
-        return null;
+        console.log('Invalid email or password')
+        return null
       }
-      const user = await this.userRepository.findOne({ where: { email } });
-  
+      const user = await this.userRepository.findOne({ where: { email } })
+
       if (user && user.password === password) {
-        return user;
+        return user
       }
-  
-      return null;
+
+      return null
     } catch (error) {
-      console.error('Erro ao validar usuário:', error);
-      return null;
+      console.error('Erro ao validar usuário:', error)
+      return null
     }
   }
-  
+
   async createUser (data: {
     username: string
     password: string
@@ -39,6 +42,7 @@ export class AuthService {
     email?: string
     telefone?: string
     estado?: string
+    cidade?: string
     regra?: string
     plano?: string
     planoStart?: Date
@@ -52,7 +56,18 @@ export class AuthService {
   }
 
   async getUserById (id: number): Promise<UserAuth | null> {
-    return this.userRepository.findOne({ where: { id } })
+    try {
+      const user = await this.userRepository
+        .createQueryBuilder('user')
+        .leftJoinAndSelect('user.pdvs', 'pdv')
+        .where('user.id = :id', { id })
+        .getOne()
+
+      return user || null
+    } catch (error) {
+      console.error('Erro ao buscar usuário por ID:', error)
+      return null
+    }
   }
 
   async getUsersByRole (role: string): Promise<UserAuth[]> {
@@ -71,6 +86,7 @@ export class AuthService {
       email?: string
       telefone?: string
       estado?: string
+      cidade?: string
       regra?: string
       plano?: string
       planoStart?: Date

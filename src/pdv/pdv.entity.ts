@@ -4,48 +4,55 @@ import {
   PrimaryGeneratedColumn,
   CreateDateColumn,
   UpdateDateColumn,
+  OneToMany,
+  ManyToMany,
+  JoinTable,
   ManyToOne,
   JoinColumn,
-  OneToMany,
-} from 'typeorm';
-import { UserAuth } from '../auth/user-auth.entity';
-import { Product } from 'src/produtos/product.entity';
-import { TipoPdv } from './tipo-pdv.enum';
+} from 'typeorm'
+import { UserAuth } from '../auth/user-auth.entity'
+import { Product } from 'src/produtos/product.entity'
+import { TipoPdv } from './tipo-pdv.enum'
+import { Venda } from 'src/vendas/venda.entity'
 
 @Entity()
 export class Pdv {
-  [x: string]: any;
+  [x: string]: any
   @PrimaryGeneratedColumn()
-  id: number;
+  id: number
 
   @Column()
-  cidade: string;
+  cidade: string
 
   @Column()
-  estado: string;
+  estado: string
 
   @Column()
-  nome: string;
+  nome: string
 
   @Column({
     type: 'enum',
     enum: TipoPdv,
   })
-  tipoPdv: TipoPdv;
+  tipoPdv: TipoPdv
 
-  @ManyToOne(() => UserAuth, (userAuth) => userAuth.pdvs, {
-    onDelete: 'NO ACTION',
-    onUpdate: 'NO ACTION',
-  })
+  @ManyToMany(() => UserAuth, user => user.pdvs)
+  @JoinTable()
+  users: UserAuth[]
+  @ManyToOne(() => UserAuth, user => user.pdvs)
   @JoinColumn({ name: 'userAuthId' })
-  userAuth: UserAuth;
+  user: UserAuth
+  @OneToMany(() => Product, product => product.pdv)
+  products: Product[]
+  @OneToMany(() => Venda, vendas => vendas.pdv)
+  sales: Venda[]
 
-  @OneToMany(() => Product, (product) => product.pdv)
-  products: Product[];
+  @Column({ nullable: true })
+  userAuthId: number
 
   @CreateDateColumn({ type: 'timestamp' })
-  createdAt: Date;
+  createdAt: Date
 
   @UpdateDateColumn({ type: 'timestamp' })
-  updatedAt: Date;
+  updatedAt: Date
 }

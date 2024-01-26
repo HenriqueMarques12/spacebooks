@@ -35,6 +35,9 @@ export class UserAuth {
   estado: string;
 
   @Column()
+  cidade: string;
+
+  @Column()
   regra: string;
 
   @Column({ nullable: true })
@@ -46,9 +49,9 @@ export class UserAuth {
   @Column({ nullable: true })
   planoFinish: Date;
 
-  @OneToMany(() => Pdv, pdv => pdv.userAuth)
+  @ManyToMany(() => Pdv, pdv => pdv.users)
+  @JoinTable()
   pdvs: Pdv[];
-  
 
   @Column({ nullable: true })
   parceiro: string;
