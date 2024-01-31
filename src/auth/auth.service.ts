@@ -10,6 +10,19 @@ export class AuthService {
     private readonly userRepository: Repository<UserAuth>,
   ) {}
 
+   calcularDatasPlano(plano: string): { planoStart: Date, planoFinish: Date } {
+    const planoStart = new Date();
+    let planoFinish = new Date(planoStart.getTime());
+  
+    const meses = parseInt(plano.split(' ')[0]);
+    if (!isNaN(meses)) {
+      planoFinish.setMonth(planoFinish.getMonth() + meses);
+    } else {
+      throw new Error('Formato de plano inválido');
+    }
+  
+    return { planoStart, planoFinish };
+  }
   async validateUser (
     email: string,
     password: string,
@@ -50,7 +63,11 @@ export class AuthService {
     pdv?: string
     parceiro?: string
   }): Promise<UserAuth> {
-    const { password, ...rest } = data
+    const { password, plano, ...rest } = data
+    if (plano) {
+      const datasPlano = this.calcularDatasPlano(plano);
+      data = { ...data, ...datasPlano };
+    }
     const newUser = this.userRepository.create({ password, ...rest })
     return await this.userRepository.save(newUser)
   }
@@ -97,7 +114,13 @@ export class AuthService {
   ): Promise<UserAuth | null> {
     const user = await this.userRepository.findOne({ where: { id } })
     if (user) {
-      const { password, ...rest } = data
+      const { plano, ...rest } = data;
+
+      if (plano) {
+        const datasPlano = this.calcularDatasPlano(plano);
+        data = { ...data, ...datasPlano };
+      }
+
       Object.assign(user, rest)
       return this.userRepository.save(user)
     }
