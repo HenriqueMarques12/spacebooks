@@ -15,7 +15,7 @@ export class AuthService {
     @InjectRepository(UserAuth)
     private readonly userRepository: Repository<UserAuth>,
     @InjectRepository(Pdv)
-  private readonly pdvRepository: Repository<Pdv>,
+    private readonly pdvRepository: Repository<Pdv>,
   ) {}
 
   calcularDatasPlano(plano: string): { planoStart: Date; planoFinish: Date } {
@@ -133,7 +133,10 @@ export class AuthService {
       parceiro?: string;
     },
   ): Promise<UserAuth> {
-    const user = await this.userRepository.findOne({ where: { id }, relations: ['pdvs'], });
+    const user = await this.userRepository.findOne({
+      where: { id },
+      relations: ['pdvs'],
+    });
 
     if (!user) {
       console.error('Usuário não encontrado.');
@@ -168,13 +171,41 @@ export class AuthService {
       throw new NotFoundException('PDV não encontrado.');
     }
 
-    if (!user.pdvs.find(existingPdv => existingPdv.id === pdvId)) {
+    if (!user.pdvs.find((existingPdv) => existingPdv.id === pdvId)) {
       user.pdvs.push(pdv);
     }
 
     await this.userRepository.save(user);
 
     return user;
+  }
+
+  async removePdvFromUser(userId: number, pdvId: number): Promise<void> {
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+      relations: ['pdvs'],
+    });
+
+    if (!user) {
+      throw new NotFoundException(`Usuário com ID ${userId} não encontrado.`);
+    }
+
+    const pdv = await this.pdvRepository.findOne({ where: { id: pdvId } });
+
+    if (!pdv) {
+      throw new NotFoundException(`PDV com ID ${pdvId} não encontrado.`);
+    }
+
+    const pdvIndex = user.pdvs.findIndex((userPdv) => userPdv.id === pdv.id);
+    if (pdvIndex === -1) {
+      throw new NotFoundException(
+        `PDV com ID ${pdvId} não está associado ao usuário com ID ${userId}.`,
+      );
+    }
+
+    user.pdvs.splice(pdvIndex, 1);
+
+    await this.userRepository.save(user);
   }
 
   async deleteUser(id: number): Promise<void> {

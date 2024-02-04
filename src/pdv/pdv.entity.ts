@@ -38,10 +38,7 @@ export class Pdv {
 
   @ManyToMany(() => UserAuth, user => user.pdvs)
   @JoinTable()
-  users: UserAuth[]
-  @ManyToOne(() => UserAuth, user => user.pdvs)
-  @JoinColumn({ name: 'userAuthId' })
-  user: UserAuth
+  users: UserAuth[];
   @OneToMany(() => Product, product => product.pdv)
   products: Product[]
   @OneToMany(() => Venda, vendas => vendas.pdv)

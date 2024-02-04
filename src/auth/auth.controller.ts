@@ -150,6 +150,14 @@ export class AuthController {
     return this.authService.addPdvToUser(userId, pdvId);
   }
 
+  @Delete('users/:userId/pdvs/:pdvId')
+  async removePdvFromUser(
+    @Param('userId') userId: number,
+    @Param('pdvId') pdvId: number,
+  ) {
+    return this.authService.removePdvFromUser(userId, pdvId);
+  }
+
   @Delete(':id')
   async deleteUser(@Param('id') id: string) {
     const userId = parseInt(id, 10);
