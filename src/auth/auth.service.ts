@@ -80,15 +80,16 @@ export class AuthService {
       throw new ConflictException('Usuário já cadastrado com este e-mail.');
     }
 
-    let datasPlano = { planoStart: null, planoFinish: null };
+    let datasPlano = { planoStart: undefined, planoFinish: undefined };
     if (plano) {
       datasPlano = this.calcularDatasPlano(plano);
     }
 
     const newUser = this.userRepository.create({
-      email,
-      ...datasPlano,
       ...rest,
+      email,
+      plano,
+      ...datasPlano,
     });
 
     return await this.userRepository.save(newUser);
