@@ -15,7 +15,10 @@ export class PdvService {
   }
 
   async findOne(id: number): Promise<Pdv> {
-    return this.pdvRepository.findOne({ where: { id } });
+    return this.pdvRepository.findOne({
+      where: { id },
+      relations: ['UserAuth'],
+    });
   }
 
   async create(createPdvDto: Partial<Pdv>): Promise<Pdv> {

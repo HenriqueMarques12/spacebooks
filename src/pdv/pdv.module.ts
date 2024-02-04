@@ -8,5 +8,6 @@ import { PdvController } from './pdv.controller';
   imports: [TypeOrmModule.forFeature([Pdv])],
   providers: [PdvService],
   controllers: [PdvController],
+  exports: [TypeOrmModule],
 })
 export class PdvModule {}

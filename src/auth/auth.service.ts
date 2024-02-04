@@ -1,133 +1,183 @@
-import { Injectable } from '@nestjs/common'
-import { InjectRepository } from '@nestjs/typeorm'
-import { Repository } from 'typeorm'
-import { UserAuth } from './user-auth.entity'
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { UserAuth } from './user-auth.entity';
+import { Pdv } from 'src/pdv/pdv.entity';
 
 @Injectable()
 export class AuthService {
-  constructor (
+  [x: string]: any;
+  constructor(
     @InjectRepository(UserAuth)
     private readonly userRepository: Repository<UserAuth>,
+    @InjectRepository(Pdv)
+  private readonly pdvRepository: Repository<Pdv>,
   ) {}
 
-   calcularDatasPlano(plano: string): { planoStart: Date, planoFinish: Date } {
+  calcularDatasPlano(plano: string): { planoStart: Date; planoFinish: Date } {
     const planoStart = new Date();
     let planoFinish = new Date(planoStart.getTime());
-  
+
     const meses = parseInt(plano.split(' ')[0]);
     if (!isNaN(meses)) {
       planoFinish.setMonth(planoFinish.getMonth() + meses);
     } else {
       throw new Error('Formato de plano inválido');
     }
-  
+
     return { planoStart, planoFinish };
   }
-  async validateUser (
+  async validateUser(
     email: string,
     password: string,
   ): Promise<UserAuth | null> {
     try {
       if (!email || !password) {
-        console.log('Invalid email or password')
-        return null
+        console.log('Invalid email or password');
+        return null;
       }
-      const user = await this.userRepository.findOne({ where: { email } })
+      const user = await this.userRepository.findOne({ where: { email } });
 
       if (user && user.password === password) {
-        return user
+        return user;
       }
 
-      return null
+      return null;
     } catch (error) {
-      console.error('Erro ao validar usuário:', error)
-      return null
+      console.error('Erro ao validar usuário:', error);
+      return null;
     }
   }
 
-  async createUser (data: {
-    username: string
-    password: string
-    role: string
-    nome?: string
-    cpf?: string
-    dataNascimento?: string
-    email?: string
-    telefone?: string
-    estado?: string
-    cidade?: string
-    regra?: string
-    plano?: string
-    planoStart?: Date
-    planoFinish?: Date
-    pdv?: string
-    parceiro?: string
+  async createUser(data: {
+    username: string;
+    password: string;
+    role: string;
+    nome?: string;
+    cpf?: string;
+    dataNascimento?: string;
+    email: string;
+    telefone?: string;
+    estado?: string;
+    cidade?: string;
+    regra?: string;
+    plano?: string;
+    planoStart?: Date;
+    planoFinish?: Date;
+    pdv?: string;
+    parceiro?: string;
   }): Promise<UserAuth> {
-    const { password, plano, ...rest } = data
-    if (plano) {
-      const datasPlano = this.calcularDatasPlano(plano);
-      data = { ...data, ...datasPlano };
-    }
-    const newUser = this.userRepository.create({ password, ...rest })
-    return await this.userRepository.save(newUser)
-  }
+    const { email, plano, ...rest } = data;
 
-  async getUserById (id: number): Promise<UserAuth | null> {
+    const existingUser = await this.userRepository.findOne({
+      where: { email },
+    });
+    if (existingUser) {
+      throw new ConflictException('Usuário já cadastrado com este e-mail.');
+    }
+
+    let datasPlano = { planoStart: null, planoFinish: null };
+    if (plano) {
+      datasPlano = this.calcularDatasPlano(plano);
+    }
+
+    const newUser = this.userRepository.create({
+      email,
+      ...datasPlano,
+      ...rest,
+    });
+
+    return await this.userRepository.save(newUser);
+  }
+  async getUserById(id: number): Promise<UserAuth | null> {
     try {
       const user = await this.userRepository
         .createQueryBuilder('user')
         .leftJoinAndSelect('user.pdvs', 'pdv')
         .where('user.id = :id', { id })
-        .getOne()
+        .getOne();
 
-      return user || null
+      return user || null;
     } catch (error) {
-      console.error('Erro ao buscar usuário por ID:', error)
-      return null
+      console.error('Erro ao buscar usuário por ID:', error);
+      return null;
     }
   }
 
-  async getUsersByRole (role: string): Promise<UserAuth[]> {
-    return this.userRepository.find({ where: { role } })
+  async getUsersByRole(role: string): Promise<UserAuth[]> {
+    return this.userRepository.find({ where: { role } });
   }
 
-  async updateUser (
+  async updateUser(
     id: number,
     data: {
-      username?: string
-      password?: string
-      role?: string
-      nome?: string
-      cpf?: string
-      dataNascimento?: string
-      email?: string
-      telefone?: string
-      estado?: string
-      cidade?: string
-      regra?: string
-      plano?: string
-      planoStart?: Date
-      planoFinish?: Date
-      pdv?: string
-      parceiro?: string
+      username?: string;
+      password?: string;
+      role?: string;
+      nome?: string;
+      cpf?: string;
+      dataNascimento?: string;
+      email?: string;
+      telefone?: string;
+      estado?: string;
+      cidade?: string;
+      regra?: string;
+      plano?: string;
+      planoStart?: Date;
+      planoFinish?: Date;
+      pdv?: number;
+      parceiro?: string;
     },
-  ): Promise<UserAuth | null> {
-    const user = await this.userRepository.findOne({ where: { id } })
-    if (user) {
-      const { plano, ...rest } = data;
+  ): Promise<UserAuth> {
+    const user = await this.userRepository.findOne({ where: { id }, relations: ['pdvs'], });
 
-      if (plano) {
-        const datasPlano = this.calcularDatasPlano(plano);
-        data = { ...data, ...datasPlano };
-      }
-
-      Object.assign(user, rest)
-      return this.userRepository.save(user)
+    if (!user) {
+      console.error('Usuário não encontrado.');
+      return null;
     }
-    return null
+
+    if (data.plano) {
+      const datasPlano = this.calcularDatasPlano(data.plano);
+      data.planoStart = datasPlano.planoStart;
+      data.planoFinish = datasPlano.planoFinish;
+    } else {
+      data.planoStart = null;
+      data.planoFinish = null;
+    }
+
+    Object.assign(user, data);
+
+    return await this.userRepository.save(user);
   }
 
-  async deleteUser (id: number): Promise<void> {
-    await this.userRepository.delete(id)
+  async addPdvToUser(userId: number, pdvId: number): Promise<UserAuth> {
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+      relations: ['pdvs'],
+    });
+    if (!user) {
+      throw new NotFoundException('Usuário não encontrado.');
+    }
+
+    const pdv = await this.pdvRepository.findOne({ where: { id: pdvId } });
+    if (!pdv) {
+      throw new NotFoundException('PDV não encontrado.');
+    }
+
+    if (!user.pdvs.find(existingPdv => existingPdv.id === pdvId)) {
+      user.pdvs.push(pdv);
+    }
+
+    await this.userRepository.save(user);
+
+    return user;
+  }
+
+  async deleteUser(id: number): Promise<void> {
+    await this.userRepository.delete(id);
   }
 }

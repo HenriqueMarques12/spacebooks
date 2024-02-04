@@ -47,9 +47,6 @@ export class Pdv {
   @OneToMany(() => Venda, vendas => vendas.pdv)
   sales: Venda[]
 
-  @Column({ nullable: true })
-  userAuthId: number
-
   @CreateDateColumn({ type: 'timestamp' })
   createdAt: Date
 
