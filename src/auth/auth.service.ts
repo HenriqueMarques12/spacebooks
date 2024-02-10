@@ -94,6 +94,41 @@ export class AuthService {
 
     return await this.userRepository.save(newUser);
   }
+  async createUserMigration(data: {
+    username: string;
+    password: string;
+    role: string;
+    nome?: string;
+    cpf?: string;
+    dataNascimento?: string;
+    email: string;
+    telefone?: string;
+    estado?: string;
+    cidade?: string;
+    regra?: string;
+    plano?: string;
+    planoStart?: Date;
+    planoFinish?: Date;
+    pdv?: string;
+    parceiro?: string;
+  }): Promise<UserAuth> {
+    const { email, plano, ...rest } = data;
+
+    const existingUser = await this.userRepository.findOne({
+      where: { email },
+    });
+    if (existingUser) {
+      throw new ConflictException('Usuário já cadastrado com este e-mail.');
+    }
+
+    const newUser = this.userRepository.create({
+      ...rest,
+      email,
+      plano,
+    });
+
+    return await this.userRepository.save(newUser);
+  }
   async getUserById(id: number): Promise<UserAuth | null> {
     try {
       const user = await this.userRepository

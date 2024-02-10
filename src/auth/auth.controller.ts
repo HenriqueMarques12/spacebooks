@@ -76,6 +76,45 @@ export class AuthController {
       parceiro,
     });
   }
+  @Post('migration')
+  async registerMigration(@Request() req) {
+    const {
+      username,
+      password,
+      role,
+      nome,
+      cpf,
+      dataNascimento,
+      email,
+      telefone,
+      estado,
+      cidade,
+      regra,
+      plano,
+      planoStart,
+      planoFinish,
+      pdv,
+      parceiro,
+    } = req.body;
+    return this.authService.createUserMigration({
+      username,
+      password,
+      role,
+      nome,
+      cpf,
+      dataNascimento,
+      email,
+      telefone,
+      estado,
+      cidade,
+      regra,
+      plano,
+      planoStart,
+      planoFinish,
+      pdv,
+      parceiro,
+    });
+  }
 
   @Get(':id')
   async getUserById(@Param('id') id: string) {
