@@ -7,8 +7,6 @@ import {
   OneToMany,
   ManyToMany,
   JoinTable,
-  ManyToOne,
-  JoinColumn,
 } from 'typeorm'
 import { UserAuth } from '../auth/user-auth.entity'
 import { Product } from 'src/produtos/product.entity'
