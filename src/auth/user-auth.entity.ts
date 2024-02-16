@@ -1,4 +1,13 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, ManyToMany, JoinTable, OneToMany } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
+  ManyToMany,
+  JoinTable,
+  OneToMany,
+} from 'typeorm';
 import { Pdv } from '../pdv/pdv.entity';
 
 @Entity()
@@ -48,8 +57,9 @@ export class UserAuth {
 
   @Column({ nullable: true })
   planoFinish: Date;
-
-  @ManyToMany(() => Pdv, pdv => pdv.users)
+  @Column()
+  pdv: string;
+  @ManyToMany(() => Pdv, (pdv) => pdv.users)
   @JoinTable()
   pdvs: Pdv[];
 

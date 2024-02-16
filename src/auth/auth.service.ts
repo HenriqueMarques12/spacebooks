@@ -165,7 +165,7 @@ export class AuthService {
       plano?: string;
       planoStart?: Date;
       planoFinish?: Date;
-      pdv?: number;
+      pdv?: string;
       parceiro?: string;
     },
   ): Promise<UserAuth> {
