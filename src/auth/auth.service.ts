@@ -18,39 +18,32 @@ export class AuthService {
     private readonly pdvRepository: Repository<Pdv>,
   ) {}
 
-  calcularDatasPlano(plano: string): { planoStart: Date; planoFinish: Date } {
-    const planoStart = new Date();
-    let planoFinish = new Date(planoStart.getTime());
+  calculatePlanDates(plan: string): { planStart: Date; planFinish: Date } {
+    const planStart = new Date();
+    let planFinish = new Date(planStart.getTime());
 
-    const meses = parseInt(plano.split(' ')[0]);
-    if (!isNaN(meses)) {
-      planoFinish.setMonth(planoFinish.getMonth() + meses);
+    const months = parseInt(plan.split(' ')[0]);
+    if (!isNaN(months)) {
+      planFinish.setMonth(planFinish.getMonth() + months);
     } else {
-      throw new Error('Formato de plano inválido');
+      throw new Error('Invalid plan format');
     }
 
-    return { planoStart, planoFinish };
+    return { planStart, planFinish };
   }
-  async validateUser(
-    email: string,
-    password: string,
-  ): Promise<UserAuth | null> {
-    try {
-      if (!email || !password) {
-        console.log('Invalid email or password');
-        return null;
-      }
-      const user = await this.userRepository.findOne({ where: { email } });
 
-      if (user && user.password === password) {
-        return user;
-      }
-
-      return null;
-    } catch (error) {
-      console.error('Erro ao validar usuário:', error);
-      return null;
+  async updateUserStatus(user: UserAuth): Promise<void> {
+    const currentDate = new Date();
+    if (
+      user.planoFinish &&
+      currentDate <= user.planoFinish &&
+      currentDate >= user.planoStart
+    ) {
+      user.status = 'ativo';
+    } else {
+      user.status = 'inativo';
     }
+    await this.userRepository.save(user);
   }
 
   async createUser(data: {
@@ -68,6 +61,7 @@ export class AuthService {
     plano?: string;
     planoStart?: Date;
     planoFinish?: Date;
+    status?: string;
     pdv?: string;
     parceiro?: string;
   }): Promise<UserAuth> {
@@ -77,23 +71,24 @@ export class AuthService {
       where: { email },
     });
     if (existingUser) {
-      throw new ConflictException('Usuário já cadastrado com este e-mail.');
+      throw new ConflictException('User already registered with this email.');
     }
 
-    let datasPlano = { planoStart: undefined, planoFinish: undefined };
+    let planDates = { planStart: undefined, planFinish: undefined };
     if (plano) {
-      datasPlano = this.calcularDatasPlano(plano);
+      planDates = this.calculatePlanDates(plano);
     }
 
     const newUser = this.userRepository.create({
       ...rest,
       email,
       plano,
-      ...datasPlano,
+      ...planDates,
     });
 
     return await this.userRepository.save(newUser);
   }
+
   async createUserMigration(data: {
     username: string;
     password: string;
@@ -109,6 +104,7 @@ export class AuthService {
     plano?: string;
     planoStart?: Date;
     planoFinish?: Date;
+    status?: string;
     pdv?: string;
     parceiro?: string;
   }): Promise<UserAuth> {
@@ -118,7 +114,7 @@ export class AuthService {
       where: { email },
     });
     if (existingUser) {
-      throw new ConflictException('Usuário já cadastrado com este e-mail.');
+      throw new ConflictException('User already registered with this email.');
     }
 
     const newUser = this.userRepository.create({
@@ -129,6 +125,7 @@ export class AuthService {
 
     return await this.userRepository.save(newUser);
   }
+
   async getUserById(id: number): Promise<UserAuth | null> {
     try {
       const user = await this.userRepository
@@ -139,7 +136,7 @@ export class AuthService {
 
       return user || null;
     } catch (error) {
-      console.error('Erro ao buscar usuário por ID:', error);
+      console.error('Error fetching user by ID:', error);
       return null;
     }
   }
@@ -165,6 +162,7 @@ export class AuthService {
       plano?: string;
       planoStart?: Date;
       planoFinish?: Date;
+      status?: string;
       pdv?: string;
       parceiro?: string;
     },
@@ -175,14 +173,14 @@ export class AuthService {
     });
 
     if (!user) {
-      console.error('Usuário não encontrado.');
+      console.error('User not found.');
       return null;
     }
 
     if (data.plano) {
-      const datasPlano = this.calcularDatasPlano(data.plano);
-      data.planoStart = datasPlano.planoStart;
-      data.planoFinish = datasPlano.planoFinish;
+      const planDates = this.calculatePlanDates(data.plano);
+      data.planoStart = planDates.planStart;
+      data.planoFinish = planDates.planFinish;
     } else {
       data.planoStart = null;
       data.planoFinish = null;
@@ -199,12 +197,12 @@ export class AuthService {
       relations: ['pdvs'],
     });
     if (!user) {
-      throw new NotFoundException('Usuário não encontrado.');
+      throw new NotFoundException('User not found.');
     }
 
     const pdv = await this.pdvRepository.findOne({ where: { id: pdvId } });
     if (!pdv) {
-      throw new NotFoundException('PDV não encontrado.');
+      throw new NotFoundException('PDV not found.');
     }
 
     if (!user.pdvs.find((existingPdv) => existingPdv.id === pdvId)) {
@@ -223,19 +221,19 @@ export class AuthService {
     });
 
     if (!user) {
-      throw new NotFoundException(`Usuário com ID ${userId} não encontrado.`);
+      throw new NotFoundException(`User with ID ${userId} not found.`);
     }
 
     const pdv = await this.pdvRepository.findOne({ where: { id: pdvId } });
 
     if (!pdv) {
-      throw new NotFoundException(`PDV com ID ${pdvId} não encontrado.`);
+      throw new NotFoundException(`PDV with ID ${pdvId} not found.`);
     }
 
     const pdvIndex = user.pdvs.findIndex((userPdv) => userPdv.id === pdv.id);
     if (pdvIndex === -1) {
       throw new NotFoundException(
-        `PDV com ID ${pdvId} não está associado ao usuário com ID ${userId}.`,
+        `PDV with ID ${pdvId} is not associated with user with ID ${userId}.`,
       );
     }
 
@@ -246,5 +244,21 @@ export class AuthService {
 
   async deleteUser(id: number): Promise<void> {
     await this.userRepository.delete(id);
+  }
+
+  async cancelUserPlan(userId: number): Promise<UserAuth> {
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+    });
+    if (!user) {
+      throw new NotFoundException('User not found.');
+    }
+
+    user.plano = null;
+    user.planoStart = null;
+    user.planoFinish = null;
+    user.status = 'Cancelado';
+
+    return await this.userRepository.save(user);
   }
 }

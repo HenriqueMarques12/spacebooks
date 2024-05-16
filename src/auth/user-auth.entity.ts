@@ -57,6 +57,9 @@ export class UserAuth {
 
   @Column({ nullable: true })
   planoFinish: Date;
+
+  @Column()
+  status: string;
   @Column()
   pdv: string;
   @ManyToMany(() => Pdv, (pdv) => pdv.users)

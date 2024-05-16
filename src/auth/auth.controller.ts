@@ -9,6 +9,7 @@ import {
   Delete,
   HttpStatus,
   HttpException,
+  NotFoundException,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LocalAuthGuard } from './local-auth.guard';
@@ -202,5 +203,15 @@ export class AuthController {
     const userId = parseInt(id, 10);
     await this.authService.deleteUser(userId);
     return { message: 'User deleted successfully' };
+  }
+
+  @Post(':userId/cancel-plan')
+  async cancelUserPlan(@Param('userId') userId: number) {
+    try {
+      await this.authService.cancelUserPlan(userId);
+      return { success: true, message: 'User plan cancelled successfully.' };
+    } catch (error) {
+      throw new NotFoundException(error);
+    }
   }
 }
