@@ -1,4 +1,4 @@
-import { IsInt, IsOptional, IsPositive } from 'class-validator';
+import { IsInt, IsOptional, IsPositive, IsString } from 'class-validator';
 
 export class ListarEbooksDto {
   @IsInt()
@@ -10,4 +10,8 @@ export class ListarEbooksDto {
   @IsPositive()
   @IsOptional()
   itemsPerPage?: number;
+
+  @IsString()
+  @IsOptional()
+  search?: string;
 }

@@ -10,13 +10,13 @@ export class EbookController {
   @Get()
   @UseInterceptors(CacheInterceptor)
   async listarEbooks(@Query() dto: ListarEbooksDto) {
-    const { page = 1, itemsPerPage = 30 } = dto;
-    return this.ebookService.listarEbooks(page, itemsPerPage);
+    const { page = 1, itemsPerPage = 30, search } = dto;
+    return this.ebookService.listarEbooks(page, itemsPerPage, search);
   }
 
   @Get(':id')
   @UseInterceptors(CacheInterceptor)
-  async obterEbookPorId(@Param('id') id: string) {
+  async obterEbookPorId(@Param('id') id: any) {
     const ebookId = parseInt(id, 10);
     return this.ebookService.obterEbookPorId(ebookId);
   }
