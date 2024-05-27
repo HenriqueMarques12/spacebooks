@@ -16,17 +16,17 @@ export class EbookService {
     const searchPattern = search ? `%${search}%` : '%';
 
     const query = `
-      SELECT P.ID, MAX(P.post_title) AS nome, MAX(P.post_content) AS post_content, MAX(P.post_status) AS post_status, P2.guid AS capa, C.name AS categoria,
+      SELECT P.ID, MAX(P.post_title) AS nome, MAX(P.post_content) AS post_content, MAX(P.post_status) AS post_status,
+      (SELECT P2.guid FROM RfdNV3uAM_posts AS P2 WHERE P2.post_type = 'attachment' AND P2.ID = (SELECT meta_value FROM RfdNV3uAM_postmeta WHERE post_id = P.ID AND meta_key = '_thumbnail_id')) AS capa,
+      C.term_id AS category_id, C.name AS categoria,
       (SELECT meta_value FROM RfdNV3uAM_postmeta WHERE post_id = P.ID AND meta_key = '_downloadable_files') AS downloadable_files,
       (SELECT meta_value FROM RfdNV3uAM_postmeta WHERE post_id = P.ID AND meta_key = '_downloadable') AS downloadable
       FROM RfdNV3uAM_posts AS P
-      LEFT JOIN RfdNV3uAM_posts AS P2 ON P2.post_parent = P.ID
       INNER JOIN RfdNV3uAM_term_relationships AS R ON P.id = R.object_id
       INNER JOIN RfdNV3uAM_terms AS C ON R.term_taxonomy_id = C.term_id
-      WHERE C.name = 'E-BOOKS' AND P2.post_mime_type LIKE 'image/%'
+      WHERE P.post_type = 'product'
       AND (P.post_title LIKE ? OR P.post_content LIKE ?)
       GROUP BY P.ID
-      HAVING COUNT(*) > 0
       ORDER BY P.ID DESC
       LIMIT ?, ?`;
 
@@ -49,9 +49,9 @@ export class EbookService {
           downloadable: any;
           categoria: any;
         }) => {
-          const categoriasProdArray = await this.obterCategoriasDoEbook(
-            ebook.ID,
-          );
+          const ebookId = parseInt(ebook.ID, 10);
+          const categoriasProdArray =
+            await this.obterCategoriasDoEbook(ebookId);
           const downloadableFiles =
             phpSerialize.unserialize(ebook.downloadable_files) || [];
 
@@ -59,7 +59,6 @@ export class EbookService {
           for (const fileId in downloadableFiles) {
             if (downloadableFiles.hasOwnProperty(fileId)) {
               const file = downloadableFiles[fileId];
-
               downloads.push({
                 id: file.id,
                 name: file.name,
@@ -68,7 +67,7 @@ export class EbookService {
             }
           }
           return {
-            id: parseInt(ebook.ID, 10),
+            id: ebookId,
             nome: ebook.nome,
             capa: ebook.capa,
             status: ebook.post_status,
@@ -88,18 +87,16 @@ export class EbookService {
   async obterEbookPorId(id: any) {
     const ebookId = parseInt(id, 10);
     const query = `
-      SELECT P.ID, MAX(P.post_title) AS nome, MAX(P.post_content) AS post_content, MAX(P.post_status) AS post_status, P2.guid AS capa, C.name AS categoria,
+      SELECT P.ID, MAX(P.post_title) AS nome, MAX(P.post_content) AS post_content, MAX(P.post_status) AS post_status,
+      (SELECT P2.guid FROM RfdNV3uAM_posts AS P2 WHERE P2.post_type = 'attachment' AND P2.ID = (SELECT meta_value FROM RfdNV3uAM_postmeta WHERE post_id = P.ID AND meta_key = '_thumbnail_id')) AS capa,
+      C.term_id AS category_id, C.name AS categoria,
       (SELECT meta_value FROM RfdNV3uAM_postmeta WHERE post_id = P.ID AND meta_key = '_downloadable_files') AS downloadable_files,
       (SELECT meta_value FROM RfdNV3uAM_postmeta WHERE post_id = P.ID AND meta_key = '_downloadable') AS downloadable
       FROM RfdNV3uAM_posts AS P
-      LEFT JOIN RfdNV3uAM_posts AS P2 ON P2.post_parent = P.ID
       INNER JOIN RfdNV3uAM_term_relationships AS R ON P.id = R.object_id
       INNER JOIN RfdNV3uAM_terms AS C ON R.term_taxonomy_id = C.term_id
-      WHERE C.name = 'E-BOOKS' AND P2.post_mime_type LIKE 'image/%' AND P.ID = ?
-      GROUP BY P.ID
-      HAVING COUNT(*) > 0
-      ORDER BY P.ID DESC
-      LIMIT 1`;
+      WHERE P.post_type = 'product' AND P.ID = ?
+      GROUP BY P.ID`;
 
     const result = await this.ebookRepository.query(query, [ebookId]);
 
@@ -108,7 +105,7 @@ export class EbookService {
     }
 
     const ebook = result[0];
-    const categoriasProdArray = await this.obterCategoriasDoEbook(ebook.ID);
+    const categoriasProdArray = await this.obterCategoriasDoEbook(ebookId);
     const downloadableFiles =
       phpSerialize.unserialize(ebook.downloadable_files) || [];
 
@@ -116,7 +113,6 @@ export class EbookService {
     for (const fileId in downloadableFiles) {
       if (downloadableFiles.hasOwnProperty(fileId)) {
         const file = downloadableFiles[fileId];
-
         downloads.push({
           id: file.id,
           name: file.name,
@@ -126,7 +122,7 @@ export class EbookService {
     }
 
     return {
-      id: parseInt(ebook.ID, 10),
+      id: ebookId,
       nome: ebook.nome,
       capa: ebook.capa,
       status: ebook.post_status,
