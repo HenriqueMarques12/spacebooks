@@ -1,19 +1,27 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Ebook } from './ebook.entity';
 import * as phpSerialize from 'php-serialize';
+import { CACHE_MANAGER, CacheStore } from '@nestjs/cache-manager';
 
 @Injectable()
 export class EbookService {
   constructor(
     @InjectRepository(Ebook)
     private readonly ebookRepository: Repository<Ebook>,
+    @Inject(CACHE_MANAGER) private readonly cacheManager: CacheStore,
   ) {}
 
   async listarEbooks(page: number, itemsPerPage: number, search?: string) {
     const offset = (page - 1) * itemsPerPage;
     const searchPattern = search ? `%${search}%` : '%';
+
+    const cacheKey = `ebooks_${page}_${itemsPerPage}_${search}`;
+    const cachedData = await this.cacheManager.get(cacheKey);
+    if (cachedData) {
+      return cachedData;
+    }
 
     const query = `
       SELECT P.ID, MAX(P.post_title) AS nome, MAX(P.post_content) AS post_content, MAX(P.post_status) AS post_status,
@@ -81,11 +89,19 @@ export class EbookService {
       ),
     );
 
+    await this.cacheManager.set(cacheKey, mappedResult, { ttl: 7200 });
     return mappedResult;
   }
 
   async obterEbookPorId(id: any) {
     const ebookId = parseInt(id, 10);
+
+    const cacheKey = `ebook_${ebookId}`;
+    const cachedData = await this.cacheManager.get(cacheKey);
+    if (cachedData) {
+      return cachedData;
+    }
+
     const query = `
       SELECT P.ID, MAX(P.post_title) AS nome, MAX(P.post_content) AS post_content, MAX(P.post_status) AS post_status,
       (SELECT P2.guid FROM RfdNV3uAM_posts AS P2 WHERE P2.post_type = 'attachment' AND P2.ID = (SELECT meta_value FROM RfdNV3uAM_postmeta WHERE post_id = P.ID AND meta_key = '_thumbnail_id')) AS capa,
@@ -121,7 +137,7 @@ export class EbookService {
       }
     }
 
-    return {
+    const ebookData = {
       id: ebookId,
       nome: ebook.nome,
       capa: ebook.capa,
@@ -132,6 +148,9 @@ export class EbookService {
       categoria: ebook.categoria,
       categorias: categoriasProdArray,
     };
+
+    await this.cacheManager.set(cacheKey, ebookData, { ttl: 7200 });
+    return ebookData;
   }
 
   private async obterCategoriasDoEbook(ebookId: number) {

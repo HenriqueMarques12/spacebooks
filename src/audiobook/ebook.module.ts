@@ -9,7 +9,7 @@ import { CacheModule } from '@nestjs/cache-manager';
   imports: [
     TypeOrmModule.forFeature([Ebook]),
     CacheModule.register({
-      ttl: 3600,
+      ttl: 7200,
       max: 500,
     }),
   ],

@@ -9,8 +9,8 @@ import { CacheModule } from '@nestjs/cache-manager';
   imports: [
     TypeOrmModule.forFeature([Ebook]),
     CacheModule.register({
-      ttl: 3600,
-      max: 500,
+      ttl: 7200, // Time to live in seconds (2 hours)
+      max: 500, // Maximum number of items in cache
     }),
   ],
   providers: [EbookService],

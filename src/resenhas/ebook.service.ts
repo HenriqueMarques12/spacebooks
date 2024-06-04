@@ -1,18 +1,26 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Ebook } from './ebook.entity';
 import * as phpSerialize from 'php-serialize';
+import { CACHE_MANAGER, CacheStore } from '@nestjs/cache-manager';
 
 @Injectable()
 export class EbookService {
   constructor(
     @InjectRepository(Ebook)
     private readonly ebookRepository: Repository<Ebook>,
+    @Inject(CACHE_MANAGER) private readonly cacheManager: CacheStore,
   ) {}
 
   async listarEbooks(page: number, itemsPerPage: number) {
     const offset = (page - 1) * itemsPerPage;
+    const cacheKey = `ebooks_resenhas_${page}_${itemsPerPage}`;
+
+    const cachedData = await this.cacheManager.get(cacheKey);
+    if (cachedData) {
+      return cachedData;
+    }
 
     const query = `
       SELECT P.ID, MAX(P.post_title) AS nome, MAX(P.post_content) AS post_content, MAX(P.post_status) AS post_status, P2.guid AS capa, C.name AS categoria,
@@ -35,41 +43,62 @@ export class EbookService {
     ]);
 
     const mappedResult = await Promise.all(
-      result.map(async (ebook) => {
-        const categoriasProdArray = await this.obterCategoriasDoEbook(ebook.ID);
-        const downloadableFiles =
-          phpSerialize.unserialize(ebook.downloadable_files) || [];
+      result.map(
+        async (ebook: {
+          ID: any;
+          downloadable_files: string | Buffer;
+          nome: any;
+          capa: any;
+          post_status: any;
+          post_content: any;
+          downloadable: any;
+          categoria: any;
+        }) => {
+          const categoriasProdArray = await this.obterCategoriasDoEbook(
+            ebook.ID,
+          );
+          const downloadableFiles =
+            phpSerialize.unserialize(ebook.downloadable_files) || [];
 
-        const downloads = [];
-        for (const fileId in downloadableFiles) {
-          if (downloadableFiles.hasOwnProperty(fileId)) {
-            const file = downloadableFiles[fileId];
+          const downloads = [];
+          for (const fileId in downloadableFiles) {
+            if (downloadableFiles.hasOwnProperty(fileId)) {
+              const file = downloadableFiles[fileId];
 
-            downloads.push({
-              id: file.id,
-              name: file.name,
-              url: file.file,
-            });
+              downloads.push({
+                id: file.id,
+                name: file.name,
+                url: file.file,
+              });
+            }
           }
-        }
-        return {
-          id: parseInt(ebook.ID, 10),
-          nome: ebook.nome,
-          capa: ebook.capa,
-          status: ebook.post_status,
-          post_content: ebook.post_content,
-          downloadable: ebook.downloadable,
-          downloads: downloads,
-          categoria: ebook.categoria,
-          categorias: categoriasProdArray,
-        };
-      }),
+          return {
+            id: parseInt(ebook.ID, 10),
+            nome: ebook.nome,
+            capa: ebook.capa,
+            status: ebook.post_status,
+            post_content: ebook.post_content,
+            downloadable: ebook.downloadable,
+            downloads: downloads,
+            categoria: ebook.categoria,
+            categorias: categoriasProdArray,
+          };
+        },
+      ),
     );
 
+    await this.cacheManager.set(cacheKey, mappedResult, { ttl: 7200 });
     return mappedResult;
   }
 
   async obterEbookPorId(id: number) {
+    const cacheKey = `ebook_resenha_${id}`;
+
+    const cachedData = await this.cacheManager.get(cacheKey);
+    if (cachedData) {
+      return cachedData;
+    }
+
     const query = `
       SELECT P.ID, MAX(P.post_title) AS nome, MAX(P.post_content) AS post_content, MAX(P.post_status) AS post_status, P2.guid AS capa, C.name AS categoria,
       (SELECT COUNT(*) FROM RfdNV3uAM_postmeta WHERE post_id = P.ID AND meta_key = '_downloadable_files') AS postmeta_count,
@@ -109,7 +138,7 @@ export class EbookService {
       }
     }
 
-    return {
+    const ebookData = {
       id: parseInt(ebook.ID, 10),
       nome: ebook.nome,
       capa: ebook.capa,
@@ -120,6 +149,9 @@ export class EbookService {
       categoria: ebook.categoria,
       categorias: categoriasProdArray,
     };
+
+    await this.cacheManager.set(cacheKey, ebookData, { ttl: 7200 });
+    return ebookData;
   }
 
   private async obterCategoriasDoEbook(ebookId: number) {
