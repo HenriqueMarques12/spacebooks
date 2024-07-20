@@ -12,8 +12,10 @@ export class EbookController {
     @Query('page') page: number = 1,
     @Query('itemsPerPage') itemsPerPage: number = 10,
     @Query('search') search?: string,
+    @Query('categories') categories?: string,
   ) {
-    return this.ebookService.listarEbooks(page, itemsPerPage, search);
+    const categoryNames = categories ? categories.split(',') : [];
+    return this.ebookService.listarEbooks(page, itemsPerPage, search, categoryNames);
   }
 
   @Get(':id')
@@ -21,3 +23,4 @@ export class EbookController {
     return this.ebookService.obterEbookPorId(id);
   }
 }
+

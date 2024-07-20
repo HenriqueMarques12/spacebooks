@@ -13,13 +13,27 @@ export class EbookService {
     @Inject(CACHE_MANAGER) private readonly cacheManager: CacheStore,
   ) {}
 
-  async listarEbooks(page: number, itemsPerPage: number) {
+  async listarEbooks(page: number, itemsPerPage: number, search?: string, categoryNames?: string[]) {
     const offset = (page - 1) * itemsPerPage;
-    const cacheKey = `ebooks_cursos_${page}_${itemsPerPage}`;
+    const searchPattern = search ? `%${search}%` : '%';
 
+    const cacheKey = `cursos_${page}_${itemsPerPage}_${search}_${categoryNames?.join('_')}`;
     const cachedData = await this.cacheManager.get(cacheKey);
     if (cachedData) {
       return cachedData;
+    }
+
+    let categoryFilter = '';
+    let categoryIds = [];
+
+    if (categoryNames && categoryNames.length > 0) {
+      const categories = await this.getCategoryIdsByName(categoryNames);
+      categoryIds = categories.map(c => c.id);
+
+      if (categoryIds.length > 0) {
+        const placeholders = categoryIds.map(() => '?').join(',');
+        categoryFilter = `AND C.term_id IN (${placeholders})`;
+      }
     }
 
     const query = `
@@ -32,15 +46,15 @@ export class EbookService {
       INNER JOIN RfdNV3uAM_term_relationships AS R ON P.id = R.object_id
       INNER JOIN RfdNV3uAM_terms AS C ON R.term_taxonomy_id = C.term_id
       WHERE C.name = 'CURSOS' AND P2.post_mime_type LIKE 'image/%' 
+      AND (P.post_title LIKE ? OR P.post_content LIKE ?)
+      ${categoryFilter}
       GROUP BY P.ID
       HAVING postmeta_count > 0
       ORDER BY P.ID DESC
       LIMIT ?, ?`;
 
-    const result = await this.ebookRepository.query(query, [
-      offset,
-      itemsPerPage,
-    ]);
+    const queryParams = [searchPattern, searchPattern, ...categoryIds, offset, itemsPerPage];
+    const result = await this.ebookRepository.query(query, queryParams);
 
     const mappedResult = await Promise.all(
       result.map(async (ebook: {
@@ -87,7 +101,7 @@ export class EbookService {
   }
 
   async obterEbookPorId(id: number) {
-    const cacheKey = `ebook_curso_${id}`;
+    const cacheKey = `curso_${id}`;
 
     const cachedData = await this.cacheManager.get(cacheKey);
     if (cachedData) {
@@ -112,7 +126,7 @@ export class EbookService {
     const result = await this.ebookRepository.query(query, [id]);
 
     if (!result || result.length === 0) {
-      throw new NotFoundException(`Ebook com ID ${id} não encontrado.`);
+      throw new NotFoundException(`Curso com ID ${id} não encontrado.`);
     }
 
     const ebook = result[0];
@@ -165,6 +179,16 @@ export class EbookService {
       }));
 
     return categoriasProdArray;
+  }
+
+  private async getCategoryIdsByName(categoryNames: string[]) {
+    const placeholders = categoryNames.map(() => '?').join(',');
+    const query = `
+      SELECT term_id AS id, name AS categoria
+      FROM RfdNV3uAM_terms
+      WHERE name IN (${placeholders})`;
+
+    return this.ebookRepository.query(query, categoryNames);
   }
 }
 

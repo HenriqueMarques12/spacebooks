@@ -13,14 +13,27 @@ export class EbookService {
     @Inject(CACHE_MANAGER) private readonly cacheManager: CacheStore,
   ) {}
 
-  async listarEbooks(page: number, itemsPerPage: number, search?: string) {
+  async listarEbooks(page: number, itemsPerPage: number, search?: string, categoryNames?: string[]) {
     const offset = (page - 1) * itemsPerPage;
     const searchPattern = search ? `%${search}%` : '%';
 
-    const cacheKey = `ebooks_${page}_${itemsPerPage}_${search}`;
+    const cacheKey = `ebooks_${page}_${itemsPerPage}_${search}_${categoryNames?.join('_')}`;
     const cachedData = await this.cacheManager.get(cacheKey);
     if (cachedData) {
       return cachedData;
+    }
+
+    let categoryFilter = '';
+    let categoryIds = [];
+
+    if (categoryNames && categoryNames.length > 0) {
+      const categories = await this.getCategoryIdsByName(categoryNames);
+      categoryIds = categories.map(c => c.id);
+
+      if (categoryIds.length > 0) {
+        const placeholders = categoryIds.map(() => '?').join(',');
+        categoryFilter = `AND C.term_id IN (${placeholders})`;
+      }
     }
 
     const query = `
@@ -34,16 +47,13 @@ export class EbookService {
       INNER JOIN RfdNV3uAM_terms AS C ON R.term_taxonomy_id = C.term_id
       WHERE P.post_type = 'product'
       AND (P.post_title LIKE ? OR P.post_content LIKE ?)
+      ${categoryFilter}
       GROUP BY P.ID
       ORDER BY P.ID DESC
       LIMIT ?, ?`;
 
-    const result = await this.ebookRepository.query(query, [
-      searchPattern,
-      searchPattern,
-      offset,
-      itemsPerPage,
-    ]);
+    const queryParams = [searchPattern, searchPattern, ...categoryIds, offset, itemsPerPage];
+    const result = await this.ebookRepository.query(query, queryParams);
 
     const mappedResult = await Promise.all(
       result.map(
@@ -176,5 +186,15 @@ export class EbookService {
       }));
 
     return categoriasProdArray;
+  }
+
+  private async getCategoryIdsByName(categoryNames: string[]) {
+    const placeholders = categoryNames.map(() => '?').join(',');
+    const query = `
+      SELECT term_id AS id, name AS categoria
+      FROM RfdNV3uAM_terms
+      WHERE name IN (${placeholders})`;
+
+    return this.ebookRepository.query(query, categoryNames);
   }
 }
