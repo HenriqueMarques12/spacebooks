@@ -10,7 +10,7 @@ export class EbookController {
   @Get()
   async listarEbooks(
     @Query('page') page: number = 1,
-    @Query('itemsPerPage') itemsPerPage: number = 10,
+    @Query('itemsPerPage') itemsPerPage: number = 20,
     @Query('search') search?: string,
     @Query('categories') categories?: string,
   ) {
