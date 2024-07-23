@@ -38,7 +38,7 @@ export class EbookService {
 
     const query = `
       SELECT P.ID, MAX(P.post_title) AS nome, MAX(P.post_content) AS post_content, MAX(P.post_status) AS post_status,
-      (SELECT P2.guid FROM RfdNV3uAM_posts AS P2 WHERE P2.post_type = 'attachment' AND P2.ID = (SELECT meta_value FROM RfdNV3uAM_postmeta WHERE post_id = P.ID AND meta_key = '_thumbnail_id')) AS capa,
+      (SELECT P2.guid FROM RfdNV3uAM_posts AS P2 WHERE P2.post_type = 'attachment' AND P2.post_mime_type LIKE 'image/%' AND P2.ID = (SELECT meta_value FROM RfdNV3uAM_postmeta WHERE post_id = P.ID AND meta_key = '_thumbnail_id')) AS capa,
       C.term_id AS category_id, C.name AS categoria,
       (SELECT meta_value FROM RfdNV3uAM_postmeta WHERE post_id = P.ID AND meta_key = '_downloadable_files') AS downloadable_files,
       (SELECT meta_value FROM RfdNV3uAM_postmeta WHERE post_id = P.ID AND meta_key = '_downloadable') AS downloadable
@@ -47,6 +47,7 @@ export class EbookService {
       INNER JOIN RfdNV3uAM_terms AS C ON R.term_taxonomy_id = C.term_id
       WHERE P.post_type = 'product'
       AND (P.post_title LIKE ? OR P.post_content LIKE ?)
+      AND C.name = 'E-BOOKS'
       ${categoryFilter}
       GROUP BY P.ID
       ORDER BY P.ID DESC
@@ -114,7 +115,7 @@ export class EbookService {
 
     const query = `
       SELECT P.ID, MAX(P.post_title) AS nome, MAX(P.post_content) AS post_content, MAX(P.post_status) AS post_status,
-      (SELECT P2.guid FROM RfdNV3uAM_posts AS P2 WHERE P2.post_type = 'attachment' AND P2.ID = (SELECT meta_value FROM RfdNV3uAM_postmeta WHERE post_id = P.ID AND meta_key = '_thumbnail_id')) AS capa,
+      (SELECT P2.guid FROM RfdNV3uAM_posts AS P2 WHERE P2.post_type = 'attachment' AND P2.post_mime_type LIKE 'image/%' AND P2.ID = (SELECT meta_value FROM RfdNV3uAM_postmeta WHERE post_id = P.ID AND meta_key = '_thumbnail_id')) AS capa,
       C.term_id AS category_id, C.name AS categoria,
       (SELECT meta_value FROM RfdNV3uAM_postmeta WHERE post_id = P.ID AND meta_key = '_downloadable_files') AS downloadable_files,
       (SELECT meta_value FROM RfdNV3uAM_postmeta WHERE post_id = P.ID AND meta_key = '_downloadable') AS downloadable
@@ -122,6 +123,7 @@ export class EbookService {
       INNER JOIN RfdNV3uAM_term_relationships AS R ON P.id = R.object_id
       INNER JOIN RfdNV3uAM_terms AS C ON R.term_taxonomy_id = C.term_id
       WHERE P.post_type = 'product' AND P.ID = ?
+      AND C.name = 'E-BOOKS'
       GROUP BY P.ID`;
 
     const result = await this.ebookRepository.query(query, [ebookId]);
@@ -198,3 +200,4 @@ export class EbookService {
     return this.ebookRepository.query(query, categoryNames);
   }
 }
+
