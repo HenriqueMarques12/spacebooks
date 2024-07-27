@@ -13,33 +13,44 @@ export class EbookService {
     @Inject(CACHE_MANAGER) private readonly cacheManager: CacheStore,
   ) {}
 
-  async listarEbooks(page: number, itemsPerPage: number, search?: string, categoryNames?: string[]) {
-    const offset = (page - 1) * itemsPerPage;
+  async listarEbooks(
+    page: number,
+    itemsPerPage: any,
+    search?: string,
+    categoryNames?: string[],
+  ) {
+    const offset: any = (page - 1) * itemsPerPage;
     const searchPattern = search ? `%${search}%` : '%';
 
-    const cacheKey = `ebooks_${page}_${itemsPerPage}_${search}_${categoryNames?.join('_')}`;
+    const cacheKey = `ebooks_${page}_${itemsPerPage}_${search}_${categoryNames?.join(
+      '_',
+    )}`;
     const cachedData = await this.cacheManager.get(cacheKey);
     if (cachedData) {
       return cachedData;
     }
 
     let categoryFilter = '';
-    let categoryIds = [];
+    const queryParams = [searchPattern, searchPattern, 'E-BOOKS'];
 
     if (categoryNames && categoryNames.length > 0) {
       const categories = await this.getCategoryIdsByName(categoryNames);
-      categoryIds = categories.map(c => c.id);
+      const categoryIds = categories.map((c) => c.id);
 
       if (categoryIds.length > 0) {
         const placeholders = categoryIds.map(() => '?').join(',');
-        categoryFilter = `AND C.term_id IN (${placeholders})`;
+        categoryFilter = `AND R.term_taxonomy_id IN (${placeholders})`;
+        queryParams.push(...categoryIds);
       }
     }
+
+    queryParams.push(offset, itemsPerPage);
 
     const query = `
       SELECT P.ID, MAX(P.post_title) AS nome, MAX(P.post_content) AS post_content, MAX(P.post_status) AS post_status,
       (SELECT P2.guid FROM RfdNV3uAM_posts AS P2 WHERE P2.post_type = 'attachment' AND P2.post_mime_type LIKE 'image/%' AND P2.ID = (SELECT meta_value FROM RfdNV3uAM_postmeta WHERE post_id = P.ID AND meta_key = '_thumbnail_id')) AS capa,
-      C.term_id AS category_id, C.name AS categoria,
+      GROUP_CONCAT(DISTINCT C.name SEPARATOR ', ') AS categorias,
+      (SELECT COUNT(*) FROM RfdNV3uAM_postmeta WHERE post_id = P.ID AND meta_key = '_downloadable_files') AS postmeta_count,
       (SELECT meta_value FROM RfdNV3uAM_postmeta WHERE post_id = P.ID AND meta_key = '_downloadable_files') AS downloadable_files,
       (SELECT meta_value FROM RfdNV3uAM_postmeta WHERE post_id = P.ID AND meta_key = '_downloadable') AS downloadable
       FROM RfdNV3uAM_posts AS P
@@ -47,13 +58,17 @@ export class EbookService {
       INNER JOIN RfdNV3uAM_terms AS C ON R.term_taxonomy_id = C.term_id
       WHERE P.post_type = 'product'
       AND (P.post_title LIKE ? OR P.post_content LIKE ?)
-      AND C.name = 'E-BOOKS'
+      AND P.ID IN (
+          SELECT object_id
+          FROM RfdNV3uAM_term_relationships AS R
+          INNER JOIN RfdNV3uAM_terms AS C ON R.term_taxonomy_id = C.term_id
+          WHERE C.name = ?
+      )
       ${categoryFilter}
       GROUP BY P.ID
       ORDER BY P.ID DESC
       LIMIT ?, ?`;
 
-    const queryParams = [searchPattern, searchPattern, ...categoryIds, offset, itemsPerPage];
     const result = await this.ebookRepository.query(query, queryParams);
 
     const mappedResult = await Promise.all(
@@ -67,10 +82,15 @@ export class EbookService {
           post_content: any;
           downloadable: any;
           categoria: any;
+          categorias: any;
         }) => {
           const ebookId = parseInt(ebook.ID, 10);
           const categoriasProdArray =
             await this.obterCategoriasDoEbook(ebookId);
+          const categoriaPrincipal = categoriasProdArray.find(
+            (cat) => cat.categoria === 'E-BOOKS',
+          );
+
           const downloadableFiles =
             phpSerialize.unserialize(ebook.downloadable_files) || [];
 
@@ -85,6 +105,7 @@ export class EbookService {
               });
             }
           }
+
           return {
             id: ebookId,
             nome: ebook.nome,
@@ -93,7 +114,7 @@ export class EbookService {
             post_content: ebook.post_content,
             downloadable: ebook.downloadable,
             downloads: downloads,
-            categoria: ebook.categoria,
+            categoria: categoriaPrincipal ? categoriaPrincipal.categoria : 'E-BOOKS',
             categorias: categoriasProdArray,
           };
         },
@@ -106,7 +127,6 @@ export class EbookService {
 
   async obterEbookPorId(id: any) {
     const ebookId = parseInt(id, 10);
-
     const cacheKey = `ebook_${ebookId}`;
     const cachedData = await this.cacheManager.get(cacheKey);
     if (cachedData) {
@@ -116,14 +136,20 @@ export class EbookService {
     const query = `
       SELECT P.ID, MAX(P.post_title) AS nome, MAX(P.post_content) AS post_content, MAX(P.post_status) AS post_status,
       (SELECT P2.guid FROM RfdNV3uAM_posts AS P2 WHERE P2.post_type = 'attachment' AND P2.post_mime_type LIKE 'image/%' AND P2.ID = (SELECT meta_value FROM RfdNV3uAM_postmeta WHERE post_id = P.ID AND meta_key = '_thumbnail_id')) AS capa,
-      C.term_id AS category_id, C.name AS categoria,
+      GROUP_CONCAT(C.name SEPARATOR ', ') AS categorias,
+      (SELECT COUNT(*) FROM RfdNV3uAM_postmeta WHERE post_id = P.ID AND meta_key = '_downloadable_files') AS postmeta_count,
       (SELECT meta_value FROM RfdNV3uAM_postmeta WHERE post_id = P.ID AND meta_key = '_downloadable_files') AS downloadable_files,
       (SELECT meta_value FROM RfdNV3uAM_postmeta WHERE post_id = P.ID AND meta_key = '_downloadable') AS downloadable
       FROM RfdNV3uAM_posts AS P
       INNER JOIN RfdNV3uAM_term_relationships AS R ON P.id = R.object_id
       INNER JOIN RfdNV3uAM_terms AS C ON R.term_taxonomy_id = C.term_id
       WHERE P.post_type = 'product' AND P.ID = ?
-      AND C.name = 'E-BOOKS'
+      AND P.ID IN (
+          SELECT object_id
+          FROM RfdNV3uAM_term_relationships AS R
+          INNER JOIN RfdNV3uAM_terms AS C ON R.term_taxonomy_id = C.term_id
+          WHERE C.name = 'E-BOOKS'
+      )
       GROUP BY P.ID`;
 
     const result = await this.ebookRepository.query(query, [ebookId]);
@@ -134,6 +160,10 @@ export class EbookService {
 
     const ebook = result[0];
     const categoriasProdArray = await this.obterCategoriasDoEbook(ebookId);
+    const categoriaPrincipal = categoriasProdArray.find(
+      (cat) => cat.categoria === 'E-BOOKS',
+    );
+
     const downloadableFiles =
       phpSerialize.unserialize(ebook.downloadable_files) || [];
 
@@ -157,7 +187,7 @@ export class EbookService {
       post_content: ebook.post_content,
       downloadable: ebook.downloadable,
       downloads: downloads,
-      categoria: ebook.categoria,
+      categoria: categoriaPrincipal ? categoriaPrincipal.categoria : 'E-BOOKS',
       categorias: categoriasProdArray,
     };
 
@@ -178,11 +208,8 @@ export class EbookService {
     );
 
     const categoriasProdArray = categoriasProd
-      .filter(
-        (categoriaProd: { categoria: string }) =>
-          categoriaProd.categoria !== 'simple',
-      )
-      .map((categoriaProd: { id: string; categoria: any }) => ({
+      .filter((categoriaProd) => categoriaProd.categoria !== 'simple')
+      .map((categoriaProd) => ({
         id: parseInt(categoriaProd.id, 10),
         categoria: categoriaProd.categoria,
       }));
@@ -191,13 +218,17 @@ export class EbookService {
   }
 
   private async getCategoryIdsByName(categoryNames: string[]) {
+    if (!categoryNames || categoryNames.length === 0) {
+      return [];
+    }
+
     const placeholders = categoryNames.map(() => '?').join(',');
     const query = `
       SELECT term_id AS id, name AS categoria
       FROM RfdNV3uAM_terms
       WHERE name IN (${placeholders})`;
 
-    return this.ebookRepository.query(query, categoryNames);
+    const result = await this.ebookRepository.query(query, categoryNames);
+    return result;
   }
 }
-
