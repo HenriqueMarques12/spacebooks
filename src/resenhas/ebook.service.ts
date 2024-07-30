@@ -16,26 +16,27 @@ export class EbookService {
   async listarEbooks(page: number, itemsPerPage: number, search?: string, categoryNames?: string[]) {
     const offset = (page - 1) * itemsPerPage;
     const searchPattern = search ? `%${search}%` : '%';
-
+  
     const cacheKey = `ebooks_resenhas_${page}_${itemsPerPage}_${search}_${categoryNames?.join('_')}`;
     const cachedData = await this.cacheManager.get(cacheKey);
     if (cachedData) {
       return cachedData;
     }
-
+  
     let categoryFilter = '';
     let categoryIds = [];
-
+  
     if (categoryNames && categoryNames.length > 0) {
       const categories = await this.getCategoryIdsByName(categoryNames);
       categoryIds = categories.map(c => c.id);
-
+  
       if (categoryIds.length > 0) {
         const placeholders = categoryIds.map(() => '?').join(',');
         categoryFilter = `AND R.term_taxonomy_id IN (${placeholders})`;
       }
     }
-
+  
+    // Ensure to only include ebooks that belong to the "RESENHAS" category
     const query = `
       SELECT 
         P.ID, 
@@ -59,6 +60,13 @@ export class EbookService {
         P2.post_mime_type LIKE 'image/%'
         AND (P.post_title LIKE ? OR P.post_content LIKE ?)
         ${categoryFilter}
+        AND EXISTS (
+          SELECT 1 
+          FROM RfdNV3uAM_term_relationships AS R2
+          INNER JOIN RfdNV3uAM_terms AS C2 ON R2.term_taxonomy_id = C2.term_id
+          WHERE R2.object_id = P.ID
+          AND C2.name = 'RESENHAS'
+        )
       GROUP BY 
         P.ID
       HAVING 
@@ -66,10 +74,10 @@ export class EbookService {
       ORDER BY 
         P.ID DESC
       LIMIT ?, ?`;
-
+  
     const queryParams = [searchPattern, searchPattern, ...categoryIds, offset, itemsPerPage];
     const result = await this.ebookRepository.query(query, queryParams);
-
+  
     const mappedResult = await Promise.all(
       result.map(
         async (ebook: {
@@ -85,12 +93,12 @@ export class EbookService {
           const categoriasArray = await this.obterCategoriasDoEbook(ebook.ID);
           const categoriaPrincipal = categoriasArray.find(cat => cat.categoria === 'RESENHAS');
           const downloadableFiles = phpSerialize.unserialize(ebook.downloadable_files) || [];
-
+  
           const downloads = [];
           for (const fileId in downloadableFiles) {
             if (downloadableFiles.hasOwnProperty(fileId)) {
               const file = downloadableFiles[fileId];
-
+  
               downloads.push({
                 id: file.id,
                 name: file.name,
@@ -98,7 +106,7 @@ export class EbookService {
               });
             }
           }
-
+  
           return {
             id: parseInt(ebook.ID, 10),
             nome: ebook.nome,
@@ -113,10 +121,11 @@ export class EbookService {
         },
       ),
     );
-
+  
     await this.cacheManager.set(cacheKey, mappedResult, { ttl: 7200 });
     return mappedResult;
   }
+  
 
   async obterEbookPorId(id: number) {
     const cacheKey = `ebook_resenha_${id}`;
@@ -164,8 +173,11 @@ export class EbookService {
 
     const ebook = result[0];
     const categoriasArray = await this.obterCategoriasDoEbook(ebook.ID);
-    const categoriaPrincipal = categoriasArray.find(cat => cat.categoria === 'RESENHAS');
-    const downloadableFiles = phpSerialize.unserialize(ebook.downloadable_files) || [];
+    const categoriaPrincipal = categoriasArray.find(
+      (cat) => cat.categoria === 'RESENHAS',
+    );
+    const downloadableFiles =
+      phpSerialize.unserialize(ebook.downloadable_files) || [];
 
     const downloads = [];
     for (const fileId in downloadableFiles) {
@@ -208,7 +220,10 @@ export class EbookService {
       WHERE 
         R.object_id = ?`;
 
-    const categoriasProd = await this.ebookRepository.query(query_sql_categorias_prod, [ebookId]);
+    const categoriasProd = await this.ebookRepository.query(
+      query_sql_categorias_prod,
+      [ebookId],
+    );
 
     const categoriasProdArray = categoriasProd
       .filter((categoriaProd) => categoriaProd.categoria !== 'simple')
