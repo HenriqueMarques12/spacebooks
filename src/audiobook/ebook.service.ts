@@ -106,7 +106,7 @@ export class EbookService {
       ),
     );
 
-    await this.cacheManager.set(cacheKey, mappedResult, { ttl: 7200 });
+    await this.cacheManager.set(cacheKey, mappedResult, { ttl: 21600 });
     return mappedResult;
   }
 
@@ -175,7 +175,7 @@ export class EbookService {
       categorias: categoriasProdArray,
     };
 
-    await this.cacheManager.set(cacheKey, ebookData, { ttl: 7200 });
+    await this.cacheManager.set(cacheKey, ebookData, { ttl: 21600 });
     return ebookData;
   }
 
